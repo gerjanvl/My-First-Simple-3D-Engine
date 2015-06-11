@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+<script src="jquery.js"></script>
+<script src="base.js"></script>
+<script src="loop.js"></script>
+<script src="input.js"></script>
+<meta name="viewport" content="width=device-width, minimum-scale=1.0">
+<style>
+    body {
+        background: black;
+    }
+
+    div {
+        position: absolute;
+    }
+</style>
+<div>
+    <canvas id="canvas" width="800" height="600">
+    </canvas>
+</div>
+<script type="text/javascript">
+    //setting up canvas
+    var element = document.getElementById("canvas");
+    var ctx = element.getContext("2d");
+    var width = element.width;
+    var height = element.height;
+	
+	// CreateSphere
+    var CreateSphere = function (lats, longs, r) {
+        var sphere = [];
+        for (i = 0; i <= lats; i++) {
+            lat0 = Math.PI * (-0.5 + (i - 1) / lats);
+            z0 = Math.sin(lat0);
+            zr0 = Math.cos(lat0);
+
+            lat1 = Math.PI * (-0.5 + i / lats);
+            z1 = Math.sin(lat1);
+            zr1 = Math.cos(lat1);
+
+            for (j = 0; j <= longs; j++) {
+                lng = 2 * Math.PI * (j - 1) / longs;
+                x = Math.cos(lng);
+                y = Math.sin(lng);
+                sphere.push(new Vector3(x * zr0 * r, y * zr0 * r, z0 * r));
+                sphere.push(new Vector3(x * zr1 * r, y * zr1 * r, z1 * r));
+            }
+        }
+        return sphere;
+    }
+	
+	
+    var projection = Matrix.CreateProjection(90, width / height, 1, 1000);
+    var rot = 0;
+    var points = [];
+    var sphere = CreateSphere(50, 50, 5);
+
+    //main loop
+    var update = function () {
+
+        //camera
+        var translate = Matrix.Translate(moveVector);
+        var camRotation = Matrix.Rotation(rotationVector);
+        var matrix = Matrix.Multiply(Matrix.Multiply(projection, camRotation), translate);
+						
+        p2 = proccess(matrix, Matrix.Multiply(Matrix.RotationZ(Utils.Radians(rot)), Matrix.RotationY(rot)), sphere);
+		
+        drawmodel([p2]);
+        rot += 5;
+    };
+
+    //drawing
+    var draw = function () {
+        //info text
+        ctx.font = "14px Georgia";
+        ctx.fillStyle = "#fff";
+        ctx.fillText(
+                "Position: X:" + Math.round(moveVector.X) +
+                " Y:" + Math.round(moveVector.Y) +
+                " Z:" + Math.round(moveVector.Z), 10, 50
+        );
+    };
+
+    //proccess 3d data to 2d view data
+    var proccess = function (camera, transforms, vectors) {
+        var points = [];
+        for (var i = 0; i < vectors.length; i++) {
+            var vector = Matrix.Transform(transforms, vectors[i]);
+            var point = Matrix.ToScreen(Matrix.Transform(camera, vector), 800, 600);
+            points[i] = point;
+        }
+        return points;
+    };
+	
+	//draw model
+    var drawmodel = function (pointsarr) {
+
+        //screen update
+        ctx.beginPath();
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, width, height);
+        ctx.closePath();
+
+        for (var a = 0; a < pointsarr.length; a++) {
+            points = pointsarr[a];
+            for (var c = 0; c < points.length; c++) {
+                //draw the lines
+                ctx.beginPath();
+                ctx.moveTo(points[c].X, points[c].Y + .5);
+
+                if (!(c + 1 == points.length)) {
+                    ctx.strokeStyle = "rgb(" +
+                            c / 10
+                            + "," +
+                            c / 30
+                            + "," +
+                            c / 40
+                            + ")";
+                    ctx.lineTo(points[c + 1].X, points[c + 1].Y + .5);
+                }
+                ctx.stroke();
+                ctx.closePath();
+            }
+
+        }
+
+    }
+</script>
+
+</body>
+
+</html>
